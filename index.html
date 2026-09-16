@@ -44,12 +44,12 @@
     .empty { padding:16px; color:var(--muted); }
     @media (max-width: 860px) { .stats, .summary { grid-template-columns:1fr 1fr; } .link-row { grid-template-columns:1fr; gap:5px; } .badge { width:max-content; } }
     @media (max-width: 620px) { .stats, .summary { grid-template-columns:1fr; } .article-head { flex-direction:column; } .count { text-align:left; } }
-  </style>
+  button { padding:10px 15px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer; } button:disabled { opacity:.5;cursor:default; } .primary { background:var(--green);color:white; } .controls { margin-bottom:22px; } details { border-top:1px solid var(--line);padding:15px 0; } summary { cursor:pointer;font-weight:650; } textarea { display:block;width:100%;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:6px; } progress { width:100%;accent-color:var(--green); } .managed-row { display:grid;grid-template-columns:30px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center; } .managed-row>div { min-width:0; } #url-list { max-height:420px;overflow:auto;margin-top:16px; } #settings label { display:block;margin:12px 0; } #import { min-width:0;max-width:230px; } .error { color:#b23726; } #message { overflow-wrap:anywhere; } </style>
 </head>
 <body>
   <header>
     <h1>國泰產險文章超連結 Dashboard</h1>
-    <div class="meta">產生時間：2026/9/16 下午1:47:13；範圍：每篇文章的正文 article 區塊，不含頁首、導覽、麵包屑與頁尾。</div>
+    <div class="meta">原始報表產生時間：2026/9/16 下午1:47:13；範圍：每篇文章的正文 article 區塊，不含頁首、導覽、麵包屑與頁尾。</div>
     <div class="stats">
       <div class="stat"><strong>58</strong><span>文章數</span></div>
       <div class="stat"><strong>400</strong><span>正文連結總數</span></div>
@@ -58,12 +58,21 @@
     </div>
   </header>
   <main>
+    <section class="panel controls">
+      <h2>每月文章盤點</h2>
+      <p class="meta">爬取第一個 article 正文中的引用連結，排除頁首、導覽與頁尾。此版本不自動判斷引用連結是否過期或 404。</p>
+      <div class="toolbar"><button id="start" class="primary">開始爬取全部文章</button><button id="stop" disabled>停止</button><button id="export">匯出備份</button><label>匯入文章清單 <input id="import" type="file" accept=".json,application/json"></label></div>
+      <progress id="progress" value="0" max="58" aria-label="爬取進度"></progress>
+      <p id="message" role="status" aria-live="polite">目前顯示原始報表或此瀏覽器上次保存的結果。</p>
+      <details id="settings"><summary>爬取服務設定（首次使用）</summary><p class="meta">先部署隨附的爬取服務，再填入網址與密碼。密碼只留在本次頁面，不會儲存。</p><label>服務網址 <input id="endpoint" type="url" placeholder="https://your-worker.workers.dev" value="https://cathay-article-crawler.irischien90.workers.dev/"></label><label>服務密碼 <input id="api-key" type="password" autocomplete="off"></label></details>
+      <details><summary>管理文章清單（<span id="article-total">58</span> 篇）</summary><p class="meta">清單與結果儲存在目前瀏覽器，不會自動同步至 GitHub 或其他電腦。可匯出備份，再匯入文章清單。</p><label for="new-urls">新增文章網址（每行一個，可一次貼上多篇）</label><textarea id="new-urls" rows="4" placeholder="https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/..."></textarea><button id="add-urls">新增到清單</button><div id="url-list"></div></details>
+    </section>
     <div class="toolbar">
       <input id="q" type="search" placeholder="搜尋文章標題或網址">
       <select id="filter">
         <option value="all">全部文章</option>
         <option value="linked">有引用連結</option>
-        <option value="empty">沒有引用連結</option>
+        <option value="empty">沒有引用連結</option><option value="errors">抓取失敗</option>
       </select>
       <select id="sort">
         <option value="index">依原始順序</option>
@@ -73,8 +82,7 @@
     </div>
     <div class="summary">
       <section class="panel">
-        <h2>連結數最多</h2>
-        <div class="mini-row"><span>2026 房屋稅繳納開跑！繳稅時間、計算方式白話告訴你</span><strong>16</strong></div><div class="mini-row"><span>汽車保險如何選?強制險＋任意險三種方案推薦給您！</span><strong>16</strong></div><div class="mini-row"><span>汽機車保險推薦誰？誰該投保？5大常見錯誤觀念你中了幾項？</span><strong>16</strong></div><div class="mini-row"><span>2026 最新韓國自由行攻略：行程規劃、景點推薦五天四夜3萬元有找！</span><strong>15</strong></div><div class="mini-row"><span>車禍強制險理賠哪些項目？汽、機車強制險保障範圍、費用說明</span><strong>14</strong></div><div class="mini-row"><span>機車保險有哪些？機車保險怎麼搭？一文搞定機車保險大小事！</span><strong>14</strong></div><div class="mini-row"><span>泰國旅遊懶人包｜最新入境規定、推薦景點、注意事項一次看</span><strong>13</strong></div><div class="mini-row"><span>法定傳染病旅平險怎麼賠？出國前你一定要知道的投保重點！</span><strong>13</strong></div>
+        <h2>連結數最多</h2><div id="top-links"></div>
       </section>
       <section class="panel">
         <h2>讀取說明</h2>
@@ -2721,30 +2729,3222 @@
         </a></div>
     </section></div>
   </main>
-  <script>
-    const q = document.querySelector("#q");
-    const filter = document.querySelector("#filter");
-    const sort = document.querySelector("#sort");
-    const list = document.querySelector("#list");
-    const cards = Array.from(document.querySelectorAll(".article-card"));
-    function apply() {
-      const term = q.value.trim().toLowerCase();
-      const mode = filter.value;
-      const ordered = [...cards].sort((a, b) => {
-        if (sort.value === "count-desc") return Number(b.dataset.count) - Number(a.dataset.count);
-        if (sort.value === "count-asc") return Number(a.dataset.count) - Number(b.dataset.count);
-        return 0;
-      });
-      for (const card of ordered) {
-        const matchesTerm = !term || card.dataset.title.includes(term) || card.dataset.url.includes(term);
-        const matchesFilter = mode === "all" || (mode === "linked" && card.dataset.hasLinks === "true") || (mode === "empty" && card.dataset.hasLinks === "false");
-        card.hidden = !(matchesTerm && matchesFilter);
-        list.appendChild(card);
-      }
+  <script id="seed-data" type="application/json">{
+  "generatedAt": "2026-09-16T05:47:13.614Z",
+  "results": [
+    {
+      "index": 1,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/20220728/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/20220728",
+      "status": 200,
+      "ok": true,
+      "title": "租房子注意事項｜租屋小白必看 9 大租屋重點",
+      "articleSelector": "article",
+      "linkCount": 0,
+      "internalCount": 0,
+      "externalCount": 0,
+      "links": []
+    },
+    {
+      "index": 2,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/20221208/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/20221208",
+      "status": 200,
+      "ok": true,
+      "title": "買房子注意事項有哪些？房屋稅大概多少？想買房必看！",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 1,
+      "externalCount": 6,
+      "links": [
+        {
+          "text": "線上申請補發",
+          "url": "https://www.gov.tw/News_Content_2_513667",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "財政部稅務入口網",
+          "url": "https://www.etax.nat.gov.tw/etwmain/tax-info/understanding/tax-saving-manual/local/house-tax/5qYVKWW",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "地方稅網路申報作業",
+          "url": "https://net.tax.nat.gov.tw/PLRX/Lrx200d01/trial_hou.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "台北市",
+          "url": "https://www.services.tpctax.gov.taipei/ihCalwithfunctions/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "台中市",
+          "url": "https://ww2.tax.taichung.gov.tw/rwd/tax_trial/house.aspx?path=369",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "高雄市",
+          "url": "https://kctax.page.link/1999kh48",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "租房子注意事項、租屋補助申請要點有哪些？十大重點一次看！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/20220728/?projectId=Q1VTMDA1MQ==",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t74/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t74",
+      "status": 200,
+      "ok": true,
+      "title": "電動機車維修多少錢？車體險怎麼保？電動機車車主必看的3件事",
+      "articleSelector": "article",
+      "linkCount": 1,
+      "internalCount": 1,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "機車保險推薦＆比較｜機車險保障有哪些？熱銷方案這裡看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t62/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t72/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t72",
+      "status": 200,
+      "ok": true,
+      "title": "驗車要帶什麼？驗車費用、規定、期限完整懶人包",
+      "articleSelector": "article",
+      "linkCount": 4,
+      "internalCount": 1,
+      "externalCount": 3,
+      "links": [
+        {
+          "text": "監理服務網",
+          "url": "https://www.mvdis.gov.tw/#gsc.tab=0",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "道路交通管理處罰條例第 17 條",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=K0040012&flno=17",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "公路局規定",
+          "url": "https://www.thb.gov.tw/cp.aspx?n=264",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "強制險查詢/下載",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t71/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t71",
+      "status": 200,
+      "ok": true,
+      "title": "汽車過戶要注意什麼？保險怎麼轉移？過戶必備證件、費用一次看",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 3,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "規定",
+          "url": "https://www.thb.gov.tw/cp.aspx?n=332",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "汽、機車驗車攻略｜驗車時間、費用、必備證件總整理",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t72/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機車過戶該準備什麼？流程有哪些？掌握5大步驟沒煩惱!",
+          "url": "https://www.cathay-ins.com.tw/content/cci-aem-cs/c-insurance/personal/knowledge-blog/motorcycle-transfer.html",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "2026 汽車保險推薦｜汽車保險方案、保費優惠總整理",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t55/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "高公局公告",
+          "url": "https://www.freeway.gov.tw/etc/Publish.aspx?NID=1939&p=8523",
+          "type": "external",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/20221130/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/20221130",
+      "status": 200,
+      "ok": true,
+      "title": "微型電動二輪車法規上線！強制險、掛牌Q&A一次看",
+      "articleSelector": "article",
+      "linkCount": 8,
+      "internalCount": 3,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "主管機關最新規範",
+          "url": "https://www.mvdis.gov.tw/m3-emv-car/car/electricBicycles/eBicyclesDoc",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "點此連結",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "道路交通管理處罰條例",
+          "url": "https://law.moj.gov.tw/News/NewsDetail.aspx?msgid=169142",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "道路交通管理處罰條例",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=K0040012&flno=73",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "強制汽車責任保險法",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0390060&kw=%e5%bc%b7%e5%88%b6%e6%b1%bd%e8%bb%8a%e8%b2%ac%e4%bb%bb%e4%bf%9d%e9%9a%aa%e6%b3%95",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "公路總局",
+          "url": "https://www.thb.gov.tw/sites/ch/modules/news/news_details?node=eeb33aa6-58a1-4d5d-b6aa-28dd4d5270b0&id=ffb87895-a0e1-42c8-bf44-ac7204f9bfcc",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "立即試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQzNA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "驗車要帶什麼證件？驗車費用多少？驗車時間與流程總整理",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t72/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-02/t55/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t55",
+      "status": 200,
+      "ok": true,
+      "title": "2026 汽車保險推薦｜汽車保險方案、保費優惠總整理",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 6,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "汽、機車強制險理賠項目、保障範圍、費用說明",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/T37/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "【第三人責任險】補償強制險不足，車禍時最實在的保障",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/liability/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "【超額責任險】千萬高額保障，補足風險缺口",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/over/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "【駕駛人傷害險】險種介紹、理賠範圍、常見問題一次看",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/driver/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "24 小時事故現場處理服務",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/services/onsite24hr/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/T37/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/T37",
+      "status": 200,
+      "ok": true,
+      "title": "車禍強制險理賠哪些項目？汽、機車強制險保障範圍、費用說明",
+      "articleSelector": "article",
+      "linkCount": 14,
+      "internalCount": 8,
+      "externalCount": 6,
+      "links": [
+        {
+          "text": "強制險電子式保險證查詢、下載",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "交通部監理服務網",
+          "url": "https://www.mvdis.gov.tw/#gsc.tab=0",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "強制汽車責任保險有效電子式保險證查詢網站",
+          "url": "https://ecard.cali.org.tw/PPCP_QRY/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "國泰產險線上試算小工具",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQyOA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "國泰產險線上試算小工具",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQyOA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "強制汽車責任保險法",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=G0390060&flno=6",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "點我預約車險小秘書",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/servlet/HttpDispatcher/ECV2_1130/prompt?&projectId=Q1VTMDQyOA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "過戶",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t71/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "線上理賠服務",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/car/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "機車保險推薦＆比較｜機車險保障有哪些？熱銷方案這裡看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t62/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "2026 汽車保險推薦｜汽車保險方案、保費優惠總整理",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t55/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "強制汽車責任保險法",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=G0390060&flno=25",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "車輛保險大解密-【強制責任險篇】",
+          "url": "https://carrisk.cathay-ins.com.tw/truth_page.asp?pkey=1463&sc=2",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-02/t62/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t62",
+      "status": 200,
+      "ok": true,
+      "title": "機車保險推薦＆比較｜機車險保障有哪些？熱銷方案這裡看",
+      "articleSelector": "article",
+      "linkCount": 2,
+      "internalCount": 1,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "大型重機專屬套餐",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/heavymoto/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t54/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t54",
+      "status": 200,
+      "ok": true,
+      "title": "【汽車稅金、規費全攻略】牌照稅、公路養管費繳納方式、費用解析",
+      "articleSelector": "article",
+      "linkCount": 6,
+      "internalCount": 1,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "地方稅網路申報作業",
+          "url": "https://net.tax.nat.gov.tw/PLRX/Lrx200d01/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "個人公路養管費查詢及繳納",
+          "url": "https://www.mvdis.gov.tw/m3-emv-fee/fee/fuelFee",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "交通部公路局網站",
+          "url": "https://www.thb.gov.tw/cp.aspx?n=224",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "財政部",
+          "url": "https://www.etax.nat.gov.tw/etwmain/tax-info/understanding/tax-saving-manual/local/tax-payment-service/NjAa802",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "各代收稅款的金融機構",
+          "url": "https://www.cbc.gov.tw/public/data/63241434671.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "汽/機車保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-02/t53/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53",
+      "status": 200,
+      "ok": true,
+      "title": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 3,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "道安總動員數據",
+          "url": "https://roadsafety.tw/Dashboard/Custom?type=%E7%B5%B1%E8%A8%88%E5%BF%AB%E8%A6%BD",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "線上試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQzOA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "我的車體險係數怎麼算？影響車體險保費因素一次搞懂",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-damage-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "道路救援服務",
+          "url": "https://www.cathay-ins.com.tw/cathayins/news/assistcondition/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-02/heavy-motorcycle/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/heavy-motorcycle",
+      "status": 200,
+      "ok": true,
+      "title": "重機環島｜重機環島路線、行前準備、天數全攻略",
+      "articleSelector": "article",
+      "linkCount": 1,
+      "internalCount": 0,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "貼文",
+          "url": "https://www.facebook.com/groups/cyberridercom/posts/2236057046556324/",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/motorcycle-subsidy/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/motorcycle-subsidy",
+      "status": 200,
+      "ok": true,
+      "title": "機車舊換新補助｜申請資格、最高補助金額一次看",
+      "articleSelector": "article",
+      "linkCount": 6,
+      "internalCount": 0,
+      "externalCount": 6,
+      "links": [
+        {
+          "text": "經濟部產業發展署網站",
+          "url": "https://www.lev.org.tw/subsidy/city",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "車輛汰舊換新媒合抵換平臺",
+          "url": "https://mobile.moenv.gov.tw/EPAMobileETP/Home/Index?ReturnUrl=%2fEPAMobileETP%2f",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "聲明書",
+          "url": "https://www.etax.nat.gov.tw/etwmain/tax-info/replace-vehicle-reduced-commodity-tax/purchase-vehicle-reduced-commodity-tax-refund-area/workflow-and-form-download/bgoVnYG",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "點此查詢",
+          "url": "https://mobile.moenv.gov.tw/EPAMobileETP/Login/Search10100",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "點此查詢",
+          "url": "https://www.etax.nat.gov.tw/etwmain/etw214w",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "資源回收網",
+          "url": "https://recycle.moenv.gov.tw/ConvenienceServices/IRecycle",
+          "type": "external",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-02/t52/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t52",
+      "status": 200,
+      "ok": true,
+      "title": "颱風季來臨！防颱準備要到位：汽車保險、旅遊險專屬保障介紹",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 5,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "颱風、地震、海嘯、冰雹、洪水或因雨積水附加條款",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/pd/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/oversea/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "居家防颱準備6要點",
+          "url": "https://www.tfdp.com.tw/cht/index.php?code=list&flag=detail&ids=135&article_id=1013&fbclid=IwAR3ireCAGbchhLuJ7FDuHFCdoUq8VlcTsra4ZDgqFGLkxkdXid1xAU4Xbb8",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "立即了解",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/domain/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "點此看參考保費",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/travel/travel_quote/prompt?inviteCode=BLOG9999",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "車輛保險大解密-【颱風洪水篇】",
+          "url": "https://carrisk.cathay-ins.com.tw/truth_page.asp?pkey=1401&sc=2",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t73/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t73",
+      "status": 200,
+      "ok": true,
+      "title": "百岳入門必看！新手路線推薦與行前須知，原來登山險這麼重要",
+      "articleSelector": "article",
+      "linkCount": 4,
+      "internalCount": 0,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "太魯閣國家公園西界",
+          "url": "https://www.taroko.gov.tw/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "雪霸國家公園內",
+          "url": "https://www.spnp.gov.tw/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "申請入園",
+          "url": "https://hike.taiwan.gov.tw/apply_1.aspx?search=97",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "需要申請",
+          "url": "https://hike.taiwan.gov.tw/apply_1.aspx",
+          "type": "external",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/travelpackinglist/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travelpackinglist",
+      "status": 200,
+      "ok": true,
+      "title": "申根保險是什麼？申根保險規定、注意事項、投保試算懶人包",
+      "articleSelector": "article",
+      "linkCount": 4,
+      "internalCount": 3,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "旅平險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "德國在台協會的說明",
+          "url": "https://taipei.diplo.de/tw-zh-tw/service/visa-einreise/seite-versicherungsmerkblatt-chin/1989898",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產險網站",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ0Mw%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/japan-tax-refund/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-tax-refund",
+      "status": 200,
+      "ok": true,
+      "title": "2026日本退稅全攻略｜退稅新制、限制、教學懶人包",
+      "articleSelector": "article",
+      "linkCount": 8,
+      "internalCount": 6,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "入境日本",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/enteringjapan/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "留學",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/studywork-study-abroad/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "打工度假",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/work-and-study/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "只有部分店鋪",
+          "url": "https://www.muji.com/jp/ja/shop/service/S027",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "聯合信用卡中心調查",
+          "url": "https://www.cna.com.tw/news/afe/202304120358.aspx",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "旅平險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "詳細方案請點此查看",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ0NA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/20221205/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/monthly-cat-cost",
+      "status": 200,
+      "ok": true,
+      "title": "養貓一個月花費多少錢？2026您需要知道的3大核心花費、法規",
+      "articleSelector": "article",
+      "linkCount": 9,
+      "internalCount": 4,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "寵物險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/pet/pet_quote/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "動物保護法",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=M0060027",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "農業部最新公告",
+          "url": "https://www.moa.gov.tw/theme_data.php?theme=publication&id=8310",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "貓奴注意！2025年元旦起貓咪一律辦寵登 2026年未辦者將開罰",
+          "url": "https://news.ltn.com.tw/news/life/breakingnews/4895903",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "動物傳染病防治條例",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=M0130003",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "室內貓免打狂犬病疫苗新制上路，",
+          "url": "https://ccap.chiayi.gov.tw/News_Content.aspx?n=8591&sms=13618&s=856210",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物醫療保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/pet/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "貓、狗掉毛是寵物健康警訊？毛孩日常照護與清潔指南",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-hairflavour/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "新手養狗指南｜養狗事前須知、花費與必備物品",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-keep-a-dog/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/japan-travel/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel",
+      "status": 200,
+      "ok": true,
+      "title": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+      "articleSelector": "article",
+      "linkCount": 12,
+      "internalCount": 6,
+      "externalCount": 6,
+      "links": [
+        {
+          "text": "Visit Japan Web",
+          "url": "https://services.digital.go.jp/zh-cmn-hant/visit-japan-web/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "日本入境規定懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/enteringjapan/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "2026 日本退稅全攻略｜退稅資格、限制、所需文件懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-tax-refund/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "日本滑雪指南：18座日本滑雪場推薦！滑雪裝備、月份、新手FAQ",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/ski-snowboard-japan/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "日本觀光局統計",
+          "url": "https://www.mlit.go.jp/kankocho/content/001767309.pdf",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病旅平險怎麼賠？出國前你一定要知道的投保重點",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "JNTO 醫療指南",
+          "url": "https://www.jnto.go.jp/emergency/chc/mi_guide.html",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "醫療機構使用指南",
+          "url": "https://www.jnto.go.jp/emergency/common/pdf/guide_chi01.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "個人醫療資訊",
+          "url": "https://www.jnto.go.jp/emergency/common/pdf/guide_chi01_p7.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "手指會話卡",
+          "url": "https://www.jnto.go.jp/emergency/common/pdf/guide_chi01_p8.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ0Ng%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/thailand-travel/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/thailand-travel",
+      "status": 200,
+      "ok": true,
+      "title": "泰國旅遊懶人包｜最新入境規定、推薦景點、注意事項一次看",
+      "articleSelector": "article",
+      "linkCount": 13,
+      "internalCount": 9,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "數位入境卡",
+          "url": "https://tdac.immigration.go.th/arrival-card/#/home",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "外交部領事事務局網站說明",
+          "url": "https://www.boca.gov.tw/sp-foof-countrycp-03-24-dec45-02-1.html",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "泰國觀光局台北辦事處網站公告",
+          "url": "https://www.tattpe.org.tw/News/Info.html?id=675",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病旅平險怎麼賠？出國前你一定要知道的投保重點",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "泰國觀光局",
+          "url": "https://www.tattpe.org.tw/HowToGo.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產險旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "線上投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "點此查看",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/emergencyassistance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "越南旅遊全攻略｜北/中/南越景點、交通、簽證、花費一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/vietnam-travel/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "韓國怎麼玩？2026最新首爾自由行五天四夜3萬元有找！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/korea-travel/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/korea-travel/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/korea-travel",
+      "status": 200,
+      "ok": true,
+      "title": "2026 最新韓國自由行攻略：行程規劃、景點推薦五天四夜3萬元有找！",
+      "articleSelector": "article",
+      "linkCount": 15,
+      "internalCount": 6,
+      "externalCount": 9,
+      "links": [
+        {
+          "text": "國泰產險旅遊險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ0OA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "曾造訪特定國家",
+          "url": "https://qcode.kdca.go.kr/qco/bbs/BD_selectBbs.do?q_bbsSn=1016&q_bbsDocNo=20250623164809725&q_clsfNo=2&q_searchKeyTy=&q_searchVal=&q_currPage=1&q_sortName=&q_sortOrder=&",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "全面禁止入境",
+          "url": "https://m.yonhapnewstv.co.kr/news/AKR20250411171045747",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Naver Map",
+          "url": "https://map.naver.com/p/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Kakao Map",
+          "url": "https://map.kakao.com/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Papago",
+          "url": "https://papago.naver.com/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Kakao T",
+          "url": "https://www.kakaocorp.com/page/service/service/KakaoT?lang=en",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Visit Korea",
+          "url": "https://big5chinese.visitkorea.or.kr/svc/main/index.do",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Klook",
+          "url": "https://www.klook.com/zh-TW/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "KKday",
+          "url": "http://kkday/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "越南旅遊全攻略｜北/中/南越景點、交通、簽證、花費一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/vietnam-travel/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "泰國旅遊指南：行程安排、食衣住行、注意事項全攻略",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/thailand-travel/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/ski-snowboard-japan/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/ski-snowboard-japan",
+      "status": 200,
+      "ok": true,
+      "title": "日本滑雪攻略｜滑雪裝備、費用、18座熱門日本滑雪場總整理",
+      "articleSelector": "article",
+      "linkCount": 2,
+      "internalCount": 2,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "日本自由行最新攻略｜景點、行程安排、交通方式全收錄",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "點此查看",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/emergencyassistance/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/vietnam-travel/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/vietnam-travel",
+      "status": 200,
+      "ok": true,
+      "title": "越南旅遊全攻略｜北/中/南越景點、交通、簽證、花費一次看",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 7,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎?",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "兒童旅平險該保嗎？爸媽必讀旅遊險保障指南！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/children-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "韓國怎麼玩？2026最新首爾自由行五天四夜3萬元有找！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/korea-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "泰國旅遊指南：行程安排、食衣住行、注意事項全攻略",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/thailand-travel/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/work-and-study/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/work-and-study",
+      "status": 200,
+      "ok": true,
+      "title": "打工度假、打工遊學必看！出國保險怎麼買？一次看懂相關須知",
+      "articleSelector": "article",
+      "linkCount": 10,
+      "internalCount": 1,
+      "externalCount": 9,
+      "links": [
+        {
+          "text": "公告",
+          "url": "https://www.youthtaiwan.net/WorkingHoliday/cp.aspx?n=6384",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "澳洲內政部網站",
+          "url": "http://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/work-holiday-417#tab-content-1",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "日本台灣交流協會",
+          "url": "https://www.koryu.or.jp/visa/taipei/working/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "台北韓國代表部官網",
+          "url": "https://overseas.mofa.go.kr/tw-zh/brd/m_19839/list.do",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "加拿大移民、難民暨公民部（IRCC）官網",
+          "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/work-canada/iec.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "撰寫電子郵件至指定電子信箱",
+          "url": "https://www.gov.uk/government/news/1st-ballot-of-the-2024-youth-mobility-scheme-for-taiwanese-youth.zh-tw",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "英國政府青年交流計劃網站",
+          "url": "https://www.gov.uk/youth-mobility/apply",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "外交部領事事務局 LINE 官方帳號",
+          "url": "https://page.line.me/545cosno",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "出國登錄",
+          "url": "https://www.boca.gov.tw/sp-abre-main-1.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "海外遊學打工專案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/studywork",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t89/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t89",
+      "status": 200,
+      "ok": true,
+      "title": "雪鏈怎麼裝？追雪族必看的雪鏈安裝、雪鏈種類懶人包",
+      "articleSelector": "article",
+      "linkCount": 1,
+      "internalCount": 1,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "國泰車體險介紹",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/pd/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/t90/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t90",
+      "status": 200,
+      "ok": true,
+      "title": "自動駕駛等於 ADAS 嗎？自動輔助駕駛等級、現況完整解析",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 1,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "SAE Levels of Driving Automation™ Refined for Clarity and International Audience",
+          "url": "https://www.sae.org/blog/sae-j3016-update",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "《 資料來源：我國汽車自動駕駛系統與電動大客車之產業前景、法規建置、 安全風險及發展現況進行專題報告 》",
+          "url": "https://ppg.ly.gov.tw/ppg/SittingAttachment/download/2024051752/03093112240050028002.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "無人載具科技創新實驗條例",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0030147",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "《道路交通安全規則》",
+          "url": "https://www.ly.gov.tw/Pages/Detail.aspx?nodeid=6590&pid=221047",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "線上投保任意險再享 87 折!",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/enteringjapan/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/enteringjapan",
+      "status": 200,
+      "ok": true,
+      "title": "《日本入境規定懶人包》入境規定、疫苗證明、Visit Japan Web教學總整理",
+      "articleSelector": "article",
+      "linkCount": 3,
+      "internalCount": 0,
+      "externalCount": 3,
+      "links": [
+        {
+          "text": "外交部領事事務局",
+          "url": "https://www.boca.gov.tw/sp-foof-countrycp-01-29-77969-1.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "衛福部",
+          "url": "https://dvc.mohw.gov.tw/vapa/apply/Index.init.ctr?openExternalBrowser=1",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "Visit Japan Web網站",
+          "url": "https://www.vjw.digital.go.jp/",
+          "type": "external",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/solo-travel/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/solo-travel",
+      "status": 200,
+      "ok": true,
+      "title": "獨旅不害怕｜適合獨旅者的國家、好處、注意事項",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 7,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "韓國怎麼玩？2026最新首爾自由行五天四夜3萬元有找！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/korea-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "泰國旅遊指南：行程安排、食衣住行、注意事項全攻略",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/thailand-travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "申根保險是什麼？申根保險規定、注意事項、投保試算懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travelpackinglist/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "點此查看",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/emergencyassistance/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/pet-keep-a-dog/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-keep-a-dog",
+      "status": 200,
+      "ok": true,
+      "title": "新手養狗指南｜養狗事前須知、花費與必備物品",
+      "articleSelector": "article",
+      "linkCount": 4,
+      "internalCount": 4,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "寵物保險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/pet/pet_quote/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物醫療保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/pet/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "貓、狗掉毛是寵物健康警訊？毛孩日常照護與清潔指南",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-hairflavour/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "狗狗咳嗽、呼吸急促，是小病還是心臟病警訊",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-dog-out-of-breath/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/travel-flight-cancellation/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation",
+      "status": 200,
+      "ok": true,
+      "title": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎？",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 3,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "旅遊不便險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "飛航規則",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=K0090014",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "航班異常處理原則",
+          "url": "https://www.tigerairtw.com/zh-TW/support/faq/flight-change",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "旅平險＋不便險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "快速理賠服務",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/fastclaim/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/house-fire-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/house-fire-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "住宅火險能提供哪些保障？住宅火險、地震險全解析",
+      "articleSelector": "article",
+      "linkCount": 6,
+      "internalCount": 3,
+      "externalCount": 3,
+      "links": [
+        {
+          "text": "財團法人住宅地震保險基金統計",
+          "url": "https://www.treif.org.tw/xmdoc/cont?xsmsid=0L301596342893869773",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "內政部消防署統計",
+          "url": "https://www.nfa.gov.tw/cht/index.php?code=list&flag=detail&ids=220&article_id=17731",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "地震保險是你想的那樣嗎？一文了解地震險理賠、保障範圍!",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/earthquake-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住家綜合保險-泰安心",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/package/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "臺灣地區住宅類建築造價參考表",
+          "url": "https://www.nlia.org.tw/office/div_fire/fire_01_line/%E5%8F%B0%E7%81%A3%E5%9C%B0%E5%8D%80%E4%BD%8F%E5%AE%85%E9%A1%9E/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "租事平安專案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/tenant/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/house-tax/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/house-tax",
+      "status": 200,
+      "ok": true,
+      "title": "2026 房屋稅繳納開跑！繳稅時間、計算方式白話告訴你",
+      "articleSelector": "article",
+      "linkCount": 16,
+      "internalCount": 1,
+      "externalCount": 15,
+      "links": [
+        {
+          "text": "財政部稅務入口網",
+          "url": "https://www.etax.nat.gov.tw/etwmain/tax-info/understanding/tax-q-and-a/local/land-value-tax/PwBwobM",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "各代收稅款的金融機構",
+          "url": "https://www.cbc.gov.tw/public/data/63241434671.pdf",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "https://net.tax.nat.gov.tw",
+          "url": "https://net.tax.nat.gov.tw/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "https://tax.nat.gov.tw",
+          "url": "https://tax.nat.gov.tw/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "https://www.etax.nat.gov.tw",
+          "url": "https://www.etax.nat.gov.tw/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "台北市",
+          "url": "https://www.services.tpctax.gov.taipei/ihCalwithfunctions/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "台中市",
+          "url": "https://ww2.tax.taichung.gov.tw/rwd/tax_trial/house.aspx?path=369",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "高雄市",
+          "url": "https://kctax.page.link/1999kh48",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "房屋稅 2.0",
+          "url": "https://www.mof.gov.tw/house",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "台北市稅捐稽徵處網站資訊",
+          "url": "https://tpctax.gov.taipei/News_Content.aspx?n=428605627B9B4FCE&sms=34DDC2994B075569&s=C2214FBE71F15C1A",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "稅捐稽徵法",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=G0340001&flno=20",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "房屋稅條例",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=G0340102&flno=6-1",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "新聞稿",
+          "url": "https://tpctax.gov.taipei/News_Content.aspx?n=F59FF484C69D07BF&sms=72544237BBE4C5F6&s=5D7E847BC98341E4",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "國稅局官網",
+          "url": "https://www.etax.nat.gov.tw/etwmain/announcement/news/QjGxKkK",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國稅局說明",
+          "url": "https://www.etax.nat.gov.tw/etwmain/tax-info/understanding/tax-saving-manual/local/house-tax/jwmKAqG",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/house-water-damage/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/house-water-damage",
+      "status": 200,
+      "ok": true,
+      "title": "水漬險是什麼？水漬險保障範圍、投保要點全攻略！",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 7,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "住宅火險能提供哪些保障？住宅火險、地震險全解析",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/house-fire-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "商業火災保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/commercial/others/fireinsurence/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住家綜合保險－泰安心",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/package/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅火災保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/fire/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅險總覽",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅火險險試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/house-insurance/house-insurance-rent/prompt?targetId=2&inviteCode=BLOG9999&projectId=Q1VTMDQxNg%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "常見問題",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA8_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/motorcycle-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/motorcycle-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "機車保險有哪些？機車保險怎麼搭？一文搞定機車保險大小事！",
+      "articleSelector": "article",
+      "linkCount": 14,
+      "internalCount": 9,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "營業機車附加條款",
+          "url": "https://www.cathay-ins.com.tw/cathayins/news/event_200219/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動機車車主必做功課，電動機車保險怎麼保才完整？",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/pd/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機不可失方案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/thief/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "線上試算/投保服務",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ2Mw%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "理賠流程",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/car/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "保險法§58",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=G0390002&flno=58",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "強制汽車責任保險法",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0390060",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "強制險查詢/下載",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "強制險的費率",
+          "url": "https://law.fsc.gov.tw/LawContent.aspx?id=FL006867",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰 2026 最新機車強制險優惠",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/events/list/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "金管會保險局-微型電動二輪車專區",
+          "url": "https://www.ib.gov.tw/ch/home.jsp?id=370&parentpath=0,8",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產險：車險優惠大集合！線上投保抽好禮！",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/events/list/car/carevents/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "認識第三人責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/liability/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/car-damage-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-damage-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "我的車體險係數怎麼算？影響車體險保費因素一次搞懂",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 1,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "保險事業發展中心",
+          "url": "https://www.tii.org.tw/tii/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "「汽車重置價格」",
+          "url": "https://www.tii.org.tw/tii/insurance/insurance5/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車保險費率規章",
+          "url": "https://www.nlia.org.tw/office/div_car/car_02_line/%E6%B1%BD%E8%BB%8A%E4%BF%9D%E9%9A%AA%E8%B2%BB%E7%8E%87%E8%A6%8F%E7%AB%A0/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/travel-typhoon/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-typhoon",
+      "status": 200,
+      "ok": true,
+      "title": "旅遊不便險颱風怎麼賠？5分鐘了解理賠文件、投保注意事項！",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 5,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎？",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產物享樂遊海外旅行綜合保險",
+          "url": "https://gcp.cathay-ins.com.tw/CXIDocs/PF/doc/assets/bobe/travel/overseas_travel_20260401.pdf",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "颱風攪亂航班 民眾申請旅遊不便險理賠產險公會2提醒",
+          "url": "https://money.udn.com/money/story/122377/8126773",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊發生事故時，讓國泰來幫助你省心理賠",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "海外旅遊保險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ2Ng%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "國內旅遊保險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-domain/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ2Ng%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/scuba-diving/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/scuba-diving",
+      "status": 200,
+      "ok": true,
+      "title": "水肺潛水手冊｜水肺/自潛/浮淺差異、裝備、證照總整理",
+      "articleSelector": "article",
+      "linkCount": 1,
+      "internalCount": 1,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "國泰海域險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/popular/sea/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/studywork-study-abroad/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/studywork-study-abroad",
+      "status": 200,
+      "ok": true,
+      "title": "出國留學攻略｜出國留學費用、條件、過來人心得分享",
+      "articleSelector": "article",
+      "linkCount": 2,
+      "internalCount": 2,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "海外遊學打工險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/health-insurance/health-insurance-studywork/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ2NQ%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "海外打工遊學",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/work-and-study/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/children-travel-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/children-travel-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "兒童旅平險該保嗎？爸媽必讀旅遊險保障指南！",
+      "articleSelector": "article",
+      "linkCount": 9,
+      "internalCount": 9,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "旅平險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "滑雪",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/ski-snowboard-japan/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "潛水",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/scuba-diving/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "登山",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t73/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "申根保險",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travelpackinglist/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/oversea/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "國內旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/domain/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "試算頁面",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ3OA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/electric-motorcycle-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/electric-motorcycle-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "電動機車保險怎麼選？電動機車保險差異與投保推薦一次看！",
+      "articleSelector": "article",
+      "linkCount": 8,
+      "internalCount": 6,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "投保/試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ2OA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動車專屬保險參考條款",
+          "url": "https://www.ib.gov.tw/ch/home.jsp?id=239&parentpath=0,2,238&mcustomize=news_view.jsp&dataserno=202404080001&toolsflag=Y&dtable=News",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "任意險二年期",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/2yearmotoins/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機車保險推薦＆比較｜機車險保障有哪些？熱銷方案這裡看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t62/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動機車車體險方案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/emoto/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動機車維修多少錢？車體險怎麼保？電動機車車主必看的3件事",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t74/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動機車車體險方案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/pd/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/pet-dog-out-of-breath/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-dog-out-of-breath",
+      "status": 200,
+      "ok": true,
+      "title": "狗狗咳嗽、呼吸急促，是小病還是心臟病警訊？",
+      "articleSelector": "article",
+      "linkCount": 4,
+      "internalCount": 4,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "新手養狗指南｜養狗事前須知、花費與必備物品",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-keep-a-dog/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "貓、狗掉毛是寵物健康警訊？毛孩日常照護與清潔指南",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-hairflavour/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/pet/pet_quote/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ4OQ%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物醫療保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/pet/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/car-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "汽車保險如何選?強制險＋任意險三種方案推薦給您！",
+      "articleSelector": "article",
+      "linkCount": 16,
+      "internalCount": 13,
+      "externalCount": 3,
+      "links": [
+        {
+          "text": "強制險",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t37/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰車險小秘書",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/servlet/HttpDispatcher/ECV2_1130/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "查詢、下載強制險電子式保險證",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "計算公式",
+          "url": "https://www.cali.org.tw/Rate/Default?t=1&y=113",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "強制汽車任保險費率表",
+          "url": "https://law.fsc.gov.tw/LawContent.aspx?id=FL006900",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "立即投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDQ5NQ%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "第三人責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/liability/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "超額責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/over/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "駕駛人傷害險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/driver/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "車體險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/pd/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "我的車體險係數怎麼算？影響車體險保費因素一次搞懂",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-damage-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "竊盜險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/thief/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "汽車險推薦方案",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車過戶怎麼辦理？強制險怎麼處理？汽車過戶流程、費用一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t71/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/infectious-diseases/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases",
+      "status": 200,
+      "ok": true,
+      "title": "法定傳染病旅平險怎麼賠？出國前你一定要知道的投保重點！",
+      "articleSelector": "article",
+      "linkCount": 13,
+      "internalCount": 6,
+      "externalCount": 7,
+      "links": [
+        {
+          "text": "旅平險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://zh.wikipedia.org/wiki/%E6%B3%95%E5%AE%9A%E5%82%B3%E6%9F%93%E7%97%85",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "傳染病防治法",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=L0050001",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "衛生福利部疾病管制署",
+          "url": "https://www.cdc.gov.tw/",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "傳染病防治法",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=L0050001&flno=3",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "衛生福利部疾病管制署",
+          "url": "https://www.cdc.gov.tw/Disease/Index",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "自墊醫療費用核退",
+          "url": "https://www.nhi.gov.tw/ch/cp-5183-4df08-2742-1.html",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "衛生",
+          "url": "https://www.nhi.gov.tw/ch/np-2739-1.html",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDUwMA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產險熱門活動頁面",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/events/list/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "理賠專區",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/travel/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/car-accident/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-accident",
+      "status": 200,
+      "ok": true,
+      "title": "出車禍怎麼辦？律師分享車禍處理流程、筆錄重點、理賠申請步驟",
+      "articleSelector": "article",
+      "linkCount": 1,
+      "internalCount": 1,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/monthly-cat-cost/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/monthly-cat-cost",
+      "status": 200,
+      "ok": true,
+      "title": "養貓一個月花費多少錢？2026您需要知道的3大核心花費、法規",
+      "articleSelector": "article",
+      "linkCount": 9,
+      "internalCount": 4,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "寵物險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/pet/pet_quote/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "動物保護法",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=M0060027",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "農業部最新公告",
+          "url": "https://www.moa.gov.tw/theme_data.php?theme=publication&id=8310",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "貓奴注意！2025年元旦起貓咪一律辦寵登 2026年未辦者將開罰",
+          "url": "https://news.ltn.com.tw/news/life/breakingnews/4895903",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "動物傳染病防治條例",
+          "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=M0130003",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "室內貓免打狂犬病疫苗新制上路，",
+          "url": "https://ccap.chiayi.gov.tw/News_Content.aspx?n=8591&sms=13618&s=856210",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物醫療保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/pet/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "貓、狗掉毛是寵物健康警訊？毛孩日常照護與清潔指南",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-hairflavour/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "新手養狗指南｜養狗事前須知、花費與必備物品",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet-keep-a-dog/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/motorcycle-transfer/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/motorcycle-transfer",
+      "status": 200,
+      "ok": true,
+      "title": "機車過戶該準備什麼？流程有哪些？掌握5大步驟沒煩惱!",
+      "articleSelector": "article",
+      "linkCount": 3,
+      "internalCount": 3,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "強制險查詢/下載",
+          "url": "https://www.cathay-ins.com.tw/INSPFWeb/servlet/HttpDispatcher/PFA5_0100/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "試算投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDUxNA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機車保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/earthquake-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/earthquake-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "地震保險是你想的那樣嗎？一文了解地震險理賠、保障範圍!",
+      "articleSelector": "article",
+      "linkCount": 6,
+      "internalCount": 5,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "住宅火險能提供哪些保障？住宅火險、地震險全解析",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/house-fire-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "地震險擴大保障開始囉 危樓紅單戶最高可領20萬元住宿費",
+          "url": "https://money.udn.com/money/story/5613/8880746",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅保險快速試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/house-insurance/house-insurance-rent/prompt?targetId=2&inviteCode=BLOG9999&projectId=Q1VTMDUxMw%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "住家綜合保險-泰安心",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/package/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住宅火災保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/fire/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "住家保戶傘綜合保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/house/property/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/travel-what-is-travel-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "旅遊不便險是什麼？4大保險、6大保障帶你安心出行！",
+      "articleSelector": "article",
+      "linkCount": 10,
+      "internalCount": 10,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "旅遊險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "兒童旅平險該保嗎？爸媽必讀旅遊險保障指南！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/children-travel-insurance/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "國內旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/domain/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/oversea/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "立即試算/投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-domain/prompt?inviteCode=BLOG9999&projectId=Q1VTMDUyMQ%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "立即試算/投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDUyMQ%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "飛機停飛、飛機延誤怎麼辦？旅遊不便險可申請理賠嗎？",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-flight-cancellation/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "旅遊不便險颱風怎麼賠？5分鐘了解理賠文件、投保注意事項！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-typhoon/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "旅遊發生事故時，讓國泰來幫助你省心理賠",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/travel/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "法定傳染病",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/car-and-motorcycle-insurance-recommendation/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-and-motorcycle-insurance-recommendation",
+      "status": 200,
+      "ok": true,
+      "title": "汽機車保險推薦誰？誰該投保？5大常見錯誤觀念你中了幾項？",
+      "articleSelector": "article",
+      "linkCount": 16,
+      "internalCount": 14,
+      "externalCount": 2,
+      "links": [
+        {
+          "text": "機車保險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/motor-insurance/motor-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDUyOA%3D%3D",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機車駕駛人傷害險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/motorcycle/driver/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車駕駛人傷害險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/driver/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動機車保險怎麼選？電動機車保險差異與投保推薦一次看！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/electric-motorcycle-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "電動車保險怎麼選？必備保障項目、理賠範圍與常見問題解答",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-insurance-for-electric-car/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "機車保險有哪些？機車保險怎麼搭？一文搞定機車保險大小事！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/motorcycle-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車保險如何選?強制險＋任意險三種方案推薦給您！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-insurance/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "金融消費評議中心",
+          "url": "https://www.foi.org.tw/Article.aspx?Lang=1&Arti=10929&lid=57",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "道路救援服務",
+          "url": "https://www.cathay-ins.com.tw/cathayins/news/assistcondition/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "任意險二年期",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/2yearmotoins/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "出車禍怎麼辦？律師分享車禍處理流程、筆錄重點、理賠申請步驟",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-accident/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "機車過戶該準備什麼？流程有哪些？掌握5大步驟沒煩惱!",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/motorcycle-transfer/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "汽車過戶要注意什麼？保險怎麼轉移？過戶必備證件、費用一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t71/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/car-insurance-for-electric-car/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-insurance-for-electric-car",
+      "status": 200,
+      "ok": true,
+      "title": "電動車保險怎麼選？必備保障項目、理賠範圍與常見問題解答",
+      "articleSelector": "article",
+      "linkCount": 3,
+      "internalCount": 2,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "電動車保險活動頁",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/events/list/car/electric/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "出車禍怎麼辦？律師分享車禍處理流程、筆錄重點、理賠申請步驟",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-accident/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "inputUrl": "https://www.cathay-ins.com.tw/cathayins/personal/knowledge-blog/category-01/excess-liability-insurance/",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/excess-liability-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "汽、機車超額責任險是什麼？您必須搞懂的保障內容、甲乙式差異！",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 3,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "超額責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/over/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "第三人責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/liability/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "騎士撞到超跑面臨天價賠償",
+          "url": "https://cars.tvbs.com.tw/life/250247",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國道3車追撞的新聞",
+          "url": "https://udn.com/news/story/7320/9109666",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "國泰產險：車險優惠大集合！線上投保抽好禮！",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/events/list/car/carevents/",
+          "type": "internal",
+          "target": "_blank"
+        },
+        {
+          "text": "車輛保險大解密-沒有超額險可能會讓你【鈔而險】！",
+          "url": "https://carrisk.cathay-ins.com.tw/truth_page.asp?pkey=1371&sc=2",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "url": "https://cathayins.tw/q5dXQ7Z9ZJ",
+          "type": "external",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "inputUrl": "https://www.cathay-ins.com.tw/content/cci-aem-cs/c-insurance/personal/knowledge-blog/dog_bites",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/dog_bites",
+      "status": 200,
+      "ok": true,
+      "title": "狗咬人怎麼辦？處理4步驟、預防方式及寵物險重點整理！",
+      "articleSelector": "article",
+      "linkCount": 5,
+      "internalCount": 1,
+      "externalCount": 4,
+      "links": [
+        {
+          "text": "民法§190I",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=B0000001&flno=190",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "不搭電梯活該？家犬衝樓梯咬人 飼主狡辯拒調解遭判拘役50天",
+          "url": "https://udn.com/news/story/7321/9248340",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "動物保護法§20",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=M0060027&flno=20",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "農業部－具攻擊性寵物出入公共場所應注意事項",
+          "url": "https://www.moa.gov.tw/ws.php?id=3950",
+          "type": "external",
+          "target": "_blank"
+        },
+        {
+          "text": "寵物險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/pet/",
+          "type": "internal",
+          "target": "_blank"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-passenger-insurance",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-passenger-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "乘客險是什麼？3大投保注意事項、理賠情境、常見問題一把抓！",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 7,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "強制險理賠",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/T37",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "汽車第三人責任險保障有哪些？傷害、財物損失給付一次看！",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/liability/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "超額責任險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/over/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "超額責任險是什麼？您必須搞懂的保障內容、甲乙式差異！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/excess-liability-insurance",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "駕駛人傷害險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/car/driver/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "機車任意險是什麼？優勢有哪些？任意險二年期比較與推薦！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/2yearmotoins",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "汽車保險如何選?強制險＋任意險三種方案推薦給您！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/car-insurance",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/flooded_car",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/flooded_car",
+      "status": 200,
+      "ok": true,
+      "title": "泡水車怎麼辦？該維修還是報廢?3種情境帶你一次看！",
+      "articleSelector": "article",
+      "linkCount": 3,
+      "internalCount": 3,
+      "externalCount": 0,
+      "links": [
+        {
+          "text": "線上試算/投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/car-insurance/car-insurance/prompt?inviteCode=BLOG9999&projectId=Q1VTMDU5MA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "車體險是什麼？甲、乙、丙式車體險比較、投保要點一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/t53",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "車險理賠應備文件",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/claim/car/",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet_insurance_subsidy",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/pet_insurance_subsidy",
+      "status": 200,
+      "ok": true,
+      "title": "2026寵物保險補助整理｜各縣市寵物補助、絕育補助一次看",
+      "articleSelector": "article",
+      "linkCount": 11,
+      "internalCount": 1,
+      "externalCount": 10,
+      "links": [
+        {
+          "text": "2026台北市寵物保險補助",
+          "url": "https://www.tcapo.gov.taipei/cp.aspx?n=007412E5C1DA2716",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "2026桃園市寵物保險補助",
+          "url": "https://animal.tycg.gov.tw/News_Content.aspx?n=8542&s=1602550",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "2026新竹縣寵物保險補助",
+          "url": "https://apc.hsinchu.gov.tw/%E3%80%8C%E6%B5%AA%E6%84%9B%E5%9B%9E%E5%AE%B6%E9%86%AB%E6%8A%8A%E7%BD%A9%E3%80%8D-%E6%96%B0%E7%AB%B9%E7%B8%A3%E5%8B%95%E4%BF%9D%E6%95%99%E8%82%B2%E5%9C%92%E5%8D%80%E8%AA%8D%E9%A4%8A%E5%84%AA%E6%83%A0/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "2026苗栗縣寵物保險補助",
+          "url": "https://animal.miaoli.gov.tw/News_Content.aspx?n=2184&s=927287",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "2026台中市寵物保險補助",
+          "url": "https://www.animal.taichung.gov.tw/1521448/1521459/1521464/3857732",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "台北市動物保護處",
+          "url": "https://www.tcapo.gov.taipei/cp.aspx?n=76F07E383A77CF84",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "新北市動物保護防疫處",
+          "url": "https://www.neuter.ntpc.gov.tw/Application/Notice",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "桃園市動保處",
+          "url": "https://animal.tycg.gov.tw/News_Content.aspx?n=8563&s=1601900",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "台中市動保處",
+          "url": "https://www.animal.taichung.gov.tw/1521448/1521512/1521528/1533853",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "高雄市動保處",
+          "url": "https://livestock.kcg.gov.tw/Pets/ChongwuJueyu/JueyuBuzhu.htm",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "寵物險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/BOBE/pet/pet_quote/prompt",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-with-elders",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-with-elders",
+      "status": 200,
+      "ok": true,
+      "title": "暑假帶長輩出國建議去哪？行前掌握3點規劃方向、5大注意事項！",
+      "articleSelector": "article",
+      "linkCount": 9,
+      "internalCount": 8,
+      "externalCount": 1,
+      "links": [
+        {
+          "text": "易家保服務",
+          "url": "https://famitrip.cathay-ins.com.tw/landing",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "日本自由行2026年攻略！景點推薦、行程安排、交通方式懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japan-travel",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "韓國怎麼玩？2026 最新首爾自由行五天四夜3萬元有找！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/korea-travel",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "泰國旅遊懶人包｜最新入境規定、推薦景點、注意事項一次看",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/thailand-travel",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "申根保險是什麼？申根保險規定、注意事項、投保試算懶人包",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travelpackinglist",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "旅遊不便險颱風怎麼賠？5分鐘了解理賠文件、投保注意事項！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-typhoon",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "旅遊不便險",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/travel-what-is-travel-insurance",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "立即投保/試算旅平險",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDYwNA%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "法定傳染病旅平險怎麼賠？出國前你一定要知道的投保重點！",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/infectious-diseases",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/studywork-insurance",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/studywork-insurance",
+      "status": 200,
+      "ok": true,
+      "title": "留學保險怎麼買？面對海外突發疾病與意外，你的保障足夠嗎？",
+      "articleSelector": "article",
+      "linkCount": 13,
+      "internalCount": 4,
+      "externalCount": 9,
+      "links": [
+        {
+          "text": "留學保險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/studywork/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "公費留學生徐皓明家人赴美參加畢典遇車禍，空軍官校開設募款專戶",
+          "url": "https://tw.news.yahoo.com/%E5%85%AC%E8%B2%BB%E7%95%99%E5%AD%B8%E7%94%9F%E5%BE%90%E7%9A%93%E6%98%8E%E5%AE%B6%E4%BA%BA%E8%B5%B4%E7%BE%8E%E5%8F%83%E5%8A%A0%E7%95%A2%E5%85%B8%E9%81%87%E8%BB%8A%E7%A6%8D-%E7%A9%BA%E8%BB%8D%E5%AE%98%E6%A0%A1%E9%96%8B%E8%A8%AD%E5%8B%9F%E6%AC%BE%E5%B0%88%E6%88%B6-012452120.html?guccounter=1&guce_referrer=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS8&guce_referrer_sig=AQAAABPzbna-ltwKH7eynBbavoOUnCnwQed6e9yo6FplOt8PVpRRWhH-WhMxEdgUWpZT2REV-IFVyhSR3AGZ978yp1WiFwuoHodrn1MGfJMuo3Wk_DZodThM7qriLqx3b25DIYFNHqq90GZZmyHkGhyQMegdVYojLVZ3BRVLZ8C-5ril",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "Law and traffic: judgements on bicycle accidents",
+          "url": "https://www.tour-magazin.de/en/buying-advice/counsellor/law-and-traffic-judgements-on-bicycle-accidents/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "立即試算/投保",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/health-insurance/health-insurance-studywork/prompt?inviteCode=BLOG9999&projectId=Q1VTMDYwOQ%3D%3D",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "Health Insurance for Students in the USA",
+          "url": "https://www.student-insurance.com/countries/usa/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "海外學生健康保險（OSHC）",
+          "url": "https://www.studyaustralia.gov.au/zh/plan-your-move/overseas-student-health-cover-oshc",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "日本國民健康保險",
+          "url": "https://zh.wikipedia.org/zh-tw/%E6%97%A5%E6%9C%AC%E5%9C%8B%E6%B0%91%E5%81%A5%E5%BA%B7%E4%BF%9D%E9%9A%AA",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "Student Health Insurance South Korea: NHIS Guide",
+          "url": "https://www.student-insurance.com/blog/student-health-insurance-south-korea-nhis-guide/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "Health Insurance for International Students",
+          "url": "https://students.ubc.ca/health/health-insurance/health-insurance-international/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "Medical Services Plan (MSP) for international students",
+          "url": "https://students.ubc.ca/health/health-insurance/health-insurance-international/medical-services-plan-msp-international/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "Health insurance for international students,employees, and visitors.",
+          "url": "https://uhip.ca/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "出國留學攻略｜出國留學費用、條件、過來人心得分享",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/studywork-study-abroad",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "打工度假、打工遊學必看！出國保險怎麼買？一次看懂相關須知",
+          "url": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/work-and-study",
+          "type": "internal",
+          "target": ""
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "inputUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japanese-maple-viewing",
+      "finalUrl": "https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/japanese-maple-viewing",
+      "status": 200,
+      "ok": true,
+      "title": "2026日本賞楓完整攻略｜第一次規劃行程、景點推薦、紅葉查詢教學＋旅遊險建議",
+      "articleSelector": "article",
+      "linkCount": 7,
+      "internalCount": 2,
+      "externalCount": 5,
+      "links": [
+        {
+          "text": "行事（活動資訊）",
+          "url": "https://www.kiyomizudera.or.jp/event/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "紅葉情報",
+          "url": "https://weathernews.jp/koyo/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "紅葉見頃・天氣資訊",
+          "url": "https://tenki.jp/kouyou/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "日本紅葉景點與預測專題",
+          "url": "https://japantravel.navitime.com/zh-tw/area/jp/feature/autumn/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "紅葉相關資訊",
+          "url": "https://n-kishou.com/corp/news-contents/autumn/",
+          "type": "external",
+          "target": ""
+        },
+        {
+          "text": "國泰產險海外旅遊險",
+          "url": "https://www.cathay-ins.com.tw/cathayins/personal/travel/oversea/",
+          "type": "internal",
+          "target": ""
+        },
+        {
+          "text": "海外旅遊保險試算",
+          "url": "https://www.cathay-ins.com.tw/INSEBWeb/travel-insurance/travel-insurance-oversea/prompt?inviteCode=BLOG9999&projectId=Q1VTMDYyMQ%3D%3D",
+          "type": "internal",
+          "target": ""
+        }
+      ]
     }
-    q.addEventListener("input", apply);
-    filter.addEventListener("change", apply);
-    sort.addEventListener("change", apply);
-  </script>
+  ]
+}</script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
