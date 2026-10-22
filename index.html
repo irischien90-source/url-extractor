@@ -44,7 +44,21 @@
     .empty { padding:16px; color:var(--muted); }
     @media (max-width: 860px) { .stats, .summary { grid-template-columns:1fr 1fr; } .link-row { grid-template-columns:1fr; gap:5px; } .badge { width:max-content; } }
     @media (max-width: 620px) { .stats, .summary { grid-template-columns:1fr; } .article-head { flex-direction:column; } .count { text-align:left; } }
-  button { padding:10px 15px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer; } button:disabled { opacity:.5;cursor:default; } .primary { background:var(--green);color:white; } .controls { margin-bottom:22px; } details { border-top:1px solid var(--line);padding:15px 0; } summary { cursor:pointer;font-weight:650; } textarea { display:block;width:100%;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:6px; } progress { width:100%;accent-color:var(--green); } .managed-row { display:grid;grid-template-columns:30px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center; } .managed-row>div { min-width:0; } #url-list { max-height:420px;overflow:auto;margin-top:16px; } #settings label { display:block;margin:12px 0; } #import { min-width:0;max-width:230px; } .error { color:#b23726; } #message { overflow-wrap:anywhere; } </style>
+  button { padding:10px 15px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer; } button:disabled { opacity:.5;cursor:default; } .primary { background:var(--green);color:white; } .controls { margin-bottom:22px; } details { border-top:1px solid var(--line);padding:15px 0; } summary { cursor:pointer;font-weight:650; } textarea { display:block;width:100%;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:6px; } progress { width:100%;accent-color:var(--green); } .managed-row { display:grid;grid-template-columns:30px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center; } .managed-row>div { min-width:0; } #url-list { max-height:420px;overflow:auto;margin-top:16px; } #settings label { display:block;margin:12px 0; } #import { min-width:0;max-width:230px; } .error { color:#b23726; } #message { overflow-wrap:anywhere; } 
+    .annual-panel { margin-bottom:20px;background:#f0f7f3; }
+    .annual-panel p,.audit-content p { line-height:1.65; }
+    .annual-panel .toolbar { align-items:flex-end; }
+    .annual-panel label { display:grid;gap:6px;font-weight:600; }
+    #audit-year { min-width:0;width:120px; }
+    .audit-content { padding:16px;overflow-wrap:anywhere; }
+    .audit-tags { display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px; }
+    .audit-content label { display:flex;gap:10px;align-items:center;flex-wrap:wrap; }
+    .finding { padding:12px;border-bottom:1px solid var(--line); }
+    .finding-list { max-height:520px;overflow:auto;background:#fafcfb; }
+    .finding p { white-space:pre-wrap; }
+    mark { background:#ffe59a;color:#412e00;padding:1px 2px;border-radius:2px; }
+    @media(max-width:620px) { .audit-content select { max-width:100%; } }
+    </style>
 </head>
 <body>
   <header>
@@ -66,6 +80,27 @@
       <p id="message" role="status" aria-live="polite">目前顯示原始報表或此瀏覽器上次保存的結果。</p>
       <details id="settings"><summary>爬取服務設定（首次使用）</summary><p class="meta">先部署隨附的爬取服務，再填入網址與密碼。密碼只留在本次頁面，不會儲存。</p><label>服務網址 <input id="endpoint" type="url" placeholder="https://your-worker.workers.dev" value="https://cathay-article-crawler.irischien90.workers.dev/"></label><label>服務密碼 <input id="api-key" type="password" autocomplete="off"></label></details>
       <details><summary>管理文章清單（<span id="article-total">58</span> 篇）</summary><p class="meta">清單與結果儲存在目前瀏覽器，不會自動同步至 GitHub 或其他電腦。可匯出備份，再匯入文章清單。</p><label for="new-urls">新增文章網址（每行一個，可一次貼上多篇）</label><textarea id="new-urls" rows="4" placeholder="https://www.cathay-ins.com.tw/c-insurance/personal/knowledge-blog/..."></textarea><button id="add-urls">新增到清單</button><div id="url-list"></div></details>
+    </section>
+    <section class="panel annual-panel">
+      <h2>年度內容盤點</h2>
+      <p>找出需要換年與交給寫手複查的文章。年份命中是盤點提示，不會自動把歷史年份、日期或網址改成新年。</p>
+      <div class="toolbar">
+        <label>盤點年份 <input id="audit-year" type="number" min="1900" max="2199" step="1" value="2026"></label>
+        <label>檢視 <select id="audit-view">
+          <option value="all-audit">全部文章與盤點狀態</option>
+          <option value="year">含指定年份的文章</option>
+          <option value="policy">政策年度複查候選</option>
+          <option value="pending">尚未盤點／抓取異常</option>
+          <option value="links">原有正文引用連結</option>
+        </select></label>
+        <button id="export-audit">匯出年度盤點 CSV</button>
+      </div>
+      <p id="audit-summary" role="status" aria-live="polite"></p>
+      <details><summary>盤點範圍與政策分類方式</summary>
+        <p>年份盤點涵蓋伺服器回傳 HTML 的正文與其他頁面文字、HTML title、所有 Meta（含 OG、Twitter、Description）、JSON-LD、圖片 alt、title、ARIA、網址與日期等屬性；共用頁首／頁尾另外標示。原有引用連結仍只抓第一個 article 正文。</p>
+        <p>不包含圖片內文字、外連檔案內容、CSS 或一般 JavaScript 程式碼，也不執行 JavaScript。動態載入才出現的內容需另行人工確認。</p>
+        <p>政策候選依標題、SEO 摘要及正文關鍵字分類，包含補助、汰舊換新、稅務、規費、法規、入境等主題；不代表政策已變更。可手動確認或排除，並匯出依據交給寫手。舊報表僅能從標題初判，請按「開始爬取全部文章」取得完整盤點。</p>
+      </details>
     </section>
     <div class="toolbar">
       <input id="q" type="search" placeholder="搜尋文章標題或網址">
@@ -5945,6 +5980,7 @@
     }
   ]
 }</script>
-  <script src="dashboard.js"></script>
+  <script src="content-audit.js?v=20261022"></script>
+  <script src="dashboard.js?v=20261022"></script>
 </body>
 </html>
