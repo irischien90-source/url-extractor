@@ -97,7 +97,7 @@
       </div>
       <p id="audit-summary" role="status" aria-live="polite"></p>
       <details><summary>盤點範圍與政策分類方式</summary>
-        <p>年份盤點涵蓋伺服器回傳 HTML 的正文與其他頁面文字、HTML title、所有 Meta（含 OG、Twitter、Description）、JSON-LD、圖片 alt、title、ARIA、網址與日期等屬性；共用頁首／頁尾另外標示。原有引用連結仍只抓第一個 article 正文。</p>
+        <p>年份盤點涵蓋正文、HTML title、SEO Meta（含 OG、Twitter、Description）、文章 JSON-LD 與正文圖片 alt 等屬性；排除發布／修改時間、活動時間及正文以外的活動與共用區塊。原有引用連結仍只抓第一個 article 正文。</p>
         <p>不包含圖片內文字、外連檔案內容、CSS 或一般 JavaScript 程式碼，也不執行 JavaScript。動態載入才出現的內容需另行人工確認。</p>
         <p>政策候選依標題、SEO 摘要及正文關鍵字分類，包含補助、汰舊換新、稅務、規費、法規、入境等主題；不代表政策已變更。可手動確認或排除，並匯出依據交給寫手。舊報表僅能從標題初判，請按「開始爬取全部文章」取得完整盤點。</p>
       </details>
@@ -5980,7 +5980,7 @@
     }
   ]
 }</script>
-  <script src="content-audit.js?v=20261022"></script>
+  <script src="content-audit.js?v=20261022b"></script>
   <script src="dashboard.js?v=20261022"></script>
 </body>
 </html>

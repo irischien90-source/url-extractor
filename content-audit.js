@@ -4,7 +4,13 @@
   else root.ContentAudit = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const VERSION = 1;
+  const VERSION = 2;
+  const dateField = /date|datetime|published|modified|updated|created|startTime|endTime|uploadTime|發布|發佈|刊登|更新時間|修改時間|活動時間|活動期間|活動日期/i;
+  const dateLabel = /^(?:發布|發佈|刊登|更新|最後更新|最後修改|修改|活動)(?:日期|時間|期間)?\s*[:：]?\s*(?:19|20|21)\d{2}/;
+  const excludedNodes = 'time,[itemprop="datePublished"],[itemprop="dateModified"],[itemprop="startDate"],[itemprop="endDate"],.published,.updated,.post-date,.publish-date,.modified-date,.event-date,.event-time';
+  function eligible(field) {
+    return field.kind !== 'shared' && !dateField.test(field.location) && !dateLabel.test(field.text) && !/^\s*(?:19|20|21)\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:[\sT\d:Z+./～~至-]*)$/.test(field.text) && !/格式無法解析/.test(field.location);
+  }
   const common = 'header,footer,nav,aside,.breadcrumb,[role="navigation"],[role="contentinfo"],[role="banner"]';
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const rules = [
@@ -33,7 +39,8 @@
     const add = (kind, location, value, caution = '') => {
       const text = clean(value);
       // Keep every year-bearing field, allowing future year searches without another fetch.
-      if (/(?:19|20|21)\d{2}/.test(text)) fields.push({ kind, location, text, caution });
+      const field = { kind, location, text, caution };
+      if (/(?:19|20|21)\d{2}/.test(text) && eligible(field)) fields.push(field);
     };
     add('seo', 'HTML <title>', doc.title);
     doc.querySelectorAll('meta').forEach((meta, i) => {
@@ -46,15 +53,16 @@
     let node, textIndex = 0;
     while ((node = walker.nextNode())) {
       const parent = node.parentElement;
-      if (!parent || parent.closest('script,style,noscript,template')) continue;
+      if (!parent || parent.closest(`script,style,noscript,template,${excludedNodes}`)) continue;
       const text = clean(node.textContent); if (!text) continue;
+      if (dateLabel.test(clean(parent.textContent))) continue;
       textIndex++;
       const inArticle = article?.contains(parent) && !parent.closest(common);
       const hidden = parent.closest('[hidden],[aria-hidden="true"],[style*="display:none"],[style*="display: none"]');
       add(inArticle ? 'body' : 'shared', `${inArticle ? '正文' : '正文以外／共用區塊'} · ${parent.localName}${hidden ? '（HTML 標示隱藏）' : ''} · 文字 ${textIndex}`, text, inArticle ? '' : '共用頁首、頁尾或正文以外文字，需確認是否由模板統一更新。');
     }
     doc.querySelectorAll('*').forEach((el, index) => {
-      if (el.localName === 'meta') return;
+      if (el.localName === 'meta' || !article?.contains(el) || el.closest(`${common},${excludedNodes}`)) return;
       for (const attr of Array.from(el.attributes)) {
         const name = attr.name;
         if (!['alt','title','aria-label','href','src','srcset','datetime','content','value'].includes(name) && !name.startsWith('data-')) continue;
@@ -67,7 +75,10 @@
       try {
         const visit = (value, path, depth = 0) => {
           if (depth > 60) { warnings.push(`JSON-LD ${i + 1} 層級超過限制，部分欄位未盤點。`); return; }
-          if (value && typeof value === 'object') Object.entries(value).forEach(([key, child]) => visit(child, `${path}.${key}`, depth + 1));
+          if (value && typeof value === 'object') {
+            if ([].concat(value['@type'] || []).some(type => /Event$/i.test(type))) return;
+            Object.entries(value).forEach(([key, child]) => { if (!dateField.test(key)) visit(child, `${path}.${key}`, depth + 1); });
+          }
           else add('structured', path, String(value ?? ''), /date|published|modified|url|image|@id/i.test(path) ? '結構化日期／資源欄位：需核對原始資料，不要直接換年。' : '結構化資料需與文章內容一致。');
         };
         visit(JSON.parse(script.textContent), `JSON-LD ${i + 1}`);
@@ -84,7 +95,7 @@
   }
   function yearFindings(audit, year) {
     if (!/^(19|20|21)\d{2}$/.test(String(year))) return [];
-    return (audit?.fields || []).filter(f => f.text.includes(String(year))).map(f => ({ ...f, count: f.text.split(String(year)).length - 1, excerpt: snippet(f.text, String(year)) }));
+    return (audit?.fields || []).filter(f => eligible(f) && f.text.includes(String(year))).map(f => ({ ...f, count: f.text.split(String(year)).length - 1, excerpt: snippet(f.text, String(year)) }));
   }
   function csv(rows) {
     return '\ufeff' + rows.map(row => row.map(value => {
